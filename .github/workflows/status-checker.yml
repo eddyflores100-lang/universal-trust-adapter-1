@@ -1,0 +1,97 @@
+name: UTA Status Page Updater
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: uta-status-checker
+  cancel-in-progress: false
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      UPSTREAM_REPO: alicelabs-llc/universal-trust-adapter
+      # Uses the UPSTREAM_TOKEN secret (must be set in repo secrets)
+      # The token needs `repo` scope on the upstream repo
+
+    steps:
+      - name: Checkout upstream main (for the checker script)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref: main
+          fetch-depth: 1
+          token: ${{ secrets.UPSTREAM_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run status checker
+        run: |
+          mkdir -p download/status
+          python3 scripts/07_status_checker.py
+          ls -la download/status/status.json
+          cat download/status/status.json | head -5
+
+      - name: Checkout upstream gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref: gh-pages
+          path: gh-pages
+          fetch-depth: 1
+          token: ${{ secrets.UPSTREAM_TOKEN }}
+
+      - name: Copy updated status.json
+        run: |
+          cp download/status/status.json gh-pages/status/status.json
+          cd gh-pages
+          git diff --stat status/status.json || true
+
+      - name: Commit and push to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add status/status.json
+          if git diff --cached --quiet; then
+            echo "No changes — status.json unchanged."
+          else
+            git commit -m "Auto-update status.json [skip ci]
+
+            Updated by GitHub Actions workflow on $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+            Source: https://github.com/eddyflores100-lang/universal-trust-adapter-1/actions/runs/${{ github.run_id }}
+            Live: https://alicelabs-llc.github.io/universal-trust-adapter/status/"
+            git push origin gh-pages
+            echo "Pushed updated status.json to gh-pages"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## UTA Status Page Update" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "Live URL: https://alicelabs-llc.github.io/universal-trust-adapter/status/" >> $GITHUB_STEP_SUMMARY
+          if [ -f download/status/status.json ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Services status" >> $GITHUB_STEP_SUMMARY
+            python3 -c "
+            import json
+            with open('download/status/status.json') as f:
+                d = json.load(f)
+            for s in d.get('services', []):
+                icon = {'operational': '✅', 'degraded': '⚠️', 'down': '❌'}.get(s['status'], '?')
+                print(f'{icon} **{s[\"name\"]}** — {s[\"status\"]} ({s[\"latency_ms\"]}ms, {s[\"uptime_90d\"]}% uptime)')
+            " >> $GITHUB_STEP_SUMMARY || true
+          fi
