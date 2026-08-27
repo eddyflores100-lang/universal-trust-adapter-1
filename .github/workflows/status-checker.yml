@@ -19,8 +19,6 @@ jobs:
 
     env:
       UPSTREAM_REPO: alicelabs-llc/universal-trust-adapter
-      # Uses the UPSTREAM_TOKEN secret (must be set in repo secrets)
-      # The token needs `repo` scope on the upstream repo
 
     steps:
       - name: Checkout upstream main (for the checker script)
@@ -41,7 +39,8 @@ jobs:
           mkdir -p download/status
           python3 scripts/07_status_checker.py
           ls -la download/status/status.json
-          cat download/status/status.json | head -5
+          echo "--- First 5 lines of status.json ---"
+          head -5 download/status/status.json
 
       - name: Checkout upstream gh-pages branch
         uses: actions/checkout@v4
@@ -67,11 +66,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes — status.json unchanged."
           else
-            git commit -m "Auto-update status.json [skip ci]
-
-            Updated by GitHub Actions workflow on $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-            Source: https://github.com/eddyflores100-lang/universal-trust-adapter-1/actions/runs/${{ github.run_id }}
-            Live: https://alicelabs-llc.github.io/universal-trust-adapter/status/"
+            git commit -m "Auto-update status.json [skip ci]"
             git push origin gh-pages
             echo "Pushed updated status.json to gh-pages"
           fi
@@ -86,12 +81,5 @@ jobs:
           if [ -f download/status/status.json ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Services status" >> $GITHUB_STEP_SUMMARY
-            python3 -c "
-            import json
-            with open('download/status/status.json') as f:
-                d = json.load(f)
-            for s in d.get('services', []):
-                icon = {'operational': '✅', 'degraded': '⚠️', 'down': '❌'}.get(s['status'], '?')
-                print(f'{icon} **{s[\"name\"]}** — {s[\"status\"]} ({s[\"latency_ms\"]}ms, {s[\"uptime_90d\"]}% uptime)')
-            " >> $GITHUB_STEP_SUMMARY || true
+            python3 scripts/print_summary.py >> $GITHUB_STEP_SUMMARY || true
           fi
