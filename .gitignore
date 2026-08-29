@@ -1,2 +1,31 @@
 skills/
 node_modules/
+
+# --- secretos y credenciales: NUNCA commitear ---
+.env
+.env.*
+*.env
+!.env.example
+.vercel-token
+.npm-token
+.netrc
+.aws/
+.gcloud/
+credentials*.json
+secrets*.json
+*.pem
+id_rsa*
+
+# --- node / build ---
+dist/
+build/
+coverage/
+*.log
+npm-debug.log*
+.vite/
+.vercel/
+.cache/
+
+# --- sistema operativo ---
+.DS_Store
+Thumbs.db
