@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.3.0",
+  "schema_version": "1.3.1",
   "published_at": "2026-09-09T00:00:00Z",
   "publisher": "AliceLabs LLC",
   "description": "Canonical bytes for UTA conformance test vectors. Each vector has its JCS-canonicalized bytes published as hex, base64, and UTF-8 text, alongside the SHA-256. An external verifier can use these to reproduce signature verification without guessing the preimage.",
@@ -286,7 +286,8 @@
   "updates": [
     "v1.1.0 — Signed all ATC vectors with a real throwaway Ed25519 CA (ca-test-1). Public key published beside the vectors (SPKI base64 + raw 32 bytes). Added wrong-ca anti-shortcut vector (real signature from a second CA). Added per-vector signed_subtree field. Previously the vectors carried placeholder signatures (0xab bytes) and a truncated 12-byte SPKI header, so no verifier could actually verify. Response to anp2network (dev.to comment 3e1j6, 2026-09-02).",
     "v1.2.0 — Added self-signed-atc (attacker key declared in identity.public_key AND used to sign; metadata clean). Separates pinned-CA runners from embedded-key/trust-on-first-use runners, which both scored 10/10 on v1.1.0. Added machine-readable expected_stages per signed vector (signature_verification / trust_anchor_key_selection / expiry_check / status_check): expected_verify alone folded signature validity with policy validity. Existing 10 vectors are UNCHANGED byte-for-byte. Response to anp2network (dev.to, 2026-09-08): \"The shortcut you killed at signature verification came back one level up, at key selection.\"",
-    "v1.3.0 — Response to anp2network (dev.to, 2026-09-08): \"the accept side is one card\" + over-rejection unpunished + expected_stages not actually scored. (1) Added valid-atc-2, a second handwritten accept card with different agent_id, capabilities, scores, protocol_language, issued_at, expires_at — canonical bytes and digest both move, so acceptance comes from the rule, not recognition. (2) Added valid-unknown-field, an accept card carrying a permitted x_uta_extension field — punishes over-rejecting runners (false rejections read as healthy on a reject-heavy suite). (3) Added the generator: ca-test-2 with its PRIVATE KEY PUBLISHED in _test-ca-keys.json, plus generate-accept-vectors.mjs producing unlimited fresh accept/self-signed/wrong-ca cards with random x_gen_* fields. Any fixed set is memorizable; a generator is not. ca-test-1 was frozen (its throwaway private key was discarded at generation time, so no second ca-test-1-signed card can ever exist — which is exactly why the generator CA had to be a new key), and the pinned anchor set is now {ca-test-1, ca-test-2}. (4) Added stage_scoring_rule + the reference scorer tests/conformance/score-runner.mjs: stage mismatches count as vector failures, killing the stage-liar runner that fails everything at signature_verification. The 11 v1.2.0 vectors are UNCHANGED byte-for-byte — all previously published verification results still hold."
+    "v1.3.0 — Response to anp2network (dev.to, 2026-09-08): \"the accept side is one card\" + over-rejection unpunished + expected_stages not actually scored. (1) Added valid-atc-2, a second handwritten accept card with different agent_id, capabilities, scores, protocol_language, issued_at, expires_at — canonical bytes and digest both move, so acceptance comes from the rule, not recognition. (2) Added valid-unknown-field, an accept card carrying a permitted x_uta_extension field — punishes over-rejecting runners (false rejections read as healthy on a reject-heavy suite). (3) Added the generator: ca-test-2 with its PRIVATE KEY PUBLISHED in _test-ca-keys.json, plus generate-accept-vectors.mjs producing unlimited fresh accept/self-signed/wrong-ca cards with random x_gen_* fields. Any fixed set is memorizable; a generator is not. ca-test-1 was frozen (its throwaway private key was discarded at generation time, so no second ca-test-1-signed card can ever exist — which is exactly why the generator CA had to be a new key), and the pinned anchor set is now {ca-test-1, ca-test-2}. (4) Added stage_scoring_rule + the reference scorer tests/conformance/score-runner.mjs: stage mismatches count as vector failures, killing the stage-liar runner that fails everything at signature_verification. The 11 v1.2.0 vectors are UNCHANGED byte-for-byte — all previously published verification results still hold.",
+    "v1.3.1 — Closes the two remaining items from the thread: (1) reproducible source-tree rebuild for agent-trust-card@1.1.2 tarball (tarball-rule.json + verify-rebuild.mjs, byte-for-byte tar-layer identity); (2) third-party digest anchoring via Sigstore public Rekor (external_anchors + verify-rekor.mjs, replaces the retracted signed-tag wording, issue #13)."
   ],
   "signed_subtree_rule": "The signature covers the JCS-canonicalized document with its top-level \"signature\" key removed. The identity.public_key inside payload is part of the signed subtree and MUST equal ca-test-1 for verify=true.",
   "test_ca": {
@@ -323,5 +324,44 @@
     "ca": "ca-test-2 (private key in _test-ca-keys.json)",
     "purpose": "Unlimited fresh signed cards. Accept mode: random agent_id, agent_name, capabilities, scores, expiry, and random x_gen_* extension fields, all signed by ca-test-2 — acceptance must come from the rule, not recognition, and no fixed set can be memorized. self-signed / wrong-ca modes produce unlimited REJECT challenges the same way.",
     "determinism": "--seed makes generation reproducible (seeded PRNG); without it, crypto-random."
+  },
+  "reproducible_build": {
+    "rule": "The npm artifact agent-trust-card@1.1.2 is rebuildable from the source tree: the source files, transformed by tarball-rule.json (12 entries, fixed order and metadata, LF→CRLF, publisher JSON serialization for package.json), reproduce the tarball's uncompressed tar layer byte-for-byte.",
+    "tarball_sha256": "f1b44ed29eea0ca9eee65c1e0974c5d2b4b512378c6d21edb6344daf9184641a",
+    "tar_layer_sha256": "519d406adba1e8199ca0c91a8f47195a81e42745aac05e599c9b3de87359b990",
+    "source_manifest_sha256": "5665c19bbfef0212c99ad1a5e156e8b265f3c5a9df05317f21775c34188e20e0",
+    "rule_file": "https://www.marketnow.site/uta/conformance/repro/tarball-rule.json",
+    "verify_command": "node verify-rebuild.mjs --manifest source-manifest.json",
+    "live": [
+      "https://www.marketnow.site/uta/conformance/repro/build-agent-trust-card.mjs",
+      "https://www.marketnow.site/uta/conformance/repro/verify-rebuild.mjs",
+      "https://www.marketnow.site/uta/conformance/repro/tarball-rule.json",
+      "https://www.marketnow.site/uta/conformance/repro/source-manifest.json",
+      "https://www.marketnow.site/uta/conformance/repro/agent-trust-card-1.1.2.tgz"
+    ]
+  },
+  "external_anchors": {
+    "rule": "The digests below are countersigned and timestamped by a third party (Sigstore public Rekor, rekor.sigstore.dev) in an append-only, inclusion-checkable transparency log. The publisher cannot rewrite an entry once committed. This replaces the retracted \"signed Git tag\" anchoring (issue #13).",
+    "rekor": {
+      "log": "https://rekor.sigstore.dev",
+      "entry_uuid": "108e9186e8c5677a91a6963aa1e9125a7350c84e5018e60e6d374db7117011c1f67e8b4c5bf420e0",
+      "log_index": 2762061972,
+      "tree_log_index": 2640157710,
+      "integrated_time": "2026-09-08T21:03:33Z",
+      "entry_url": "https://rekor.sigstore.dev/api/v1/log/entries?logIndex=2762061972",
+      "countersignature": "ECDSA P-256 over sha256(anchor statement), throwaway key, private key discarded after signing"
+    },
+    "anchored": {
+      "agent-trust-card-1.1.2.tgz": "f1b44ed29eea0ca9eee65c1e0974c5d2b4b512378c6d21edb6344daf9184641a",
+      "agent-trust-card-1.1.2 tar layer (rebuild target)": "519d406adba1e8199ca0c91a8f47195a81e42745aac05e599c9b3de87359b990",
+      "source manifest (12 files)": "5665c19bbfef0212c99ad1a5e156e8b265f3c5a9df05317f21775c34188e20e0",
+      "conformance vectors _index.json v1.3.0": "358a18d58aaef16c3c64a2622404d88d8af67e1cb6c31ea76dac12626eab7597"
+    },
+    "verify_command": "node verify-rekor.mjs",
+    "live": [
+      "https://www.marketnow.site/uta/conformance/anchors/anchor-statement.json",
+      "https://www.marketnow.site/uta/conformance/anchors/anchor-record.json",
+      "https://www.marketnow.site/uta/conformance/anchors/verify-rekor.mjs"
+    ]
   }
 }
