@@ -43,7 +43,7 @@
     "playwright": "^1.61.0",
     "tailwindcss": "^4.3.0",
     "vite": "^8.0.12",
-    "wrangler": "^4.105.0"
+    "wrangler": "^4.132.0"
   },
   "license": "MNNC-1.0",
   "atc_version": "2.0",
