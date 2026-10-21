@@ -80,7 +80,7 @@
     "url": "mailto:support@alicelabs.site"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.0",
     "canonicalize": "^2.0.0"
   },
   "engines": {
